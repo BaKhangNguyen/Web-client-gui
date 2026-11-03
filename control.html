@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DSE Mars Rover - Control</title>
+  <link rel="stylesheet" href="control.css">
+</head>
+<body>
+  <div id="control-screen">
+    <div class="panel">
+      <h2 class="panel-title">VIDEO STREAMING 1</h2>
+      <div class="video">VIDEO STREAMING 1</div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title">ROVER CONTROL</h2>
+      <button id="mode">MODE: HOLD</button>
+      <div id="buttons">
+        <span></span><button class="drive" data-command="FWD">↑</button><span></span>
+        <button class="drive" data-command="LEFT">←</button>
+        <button id="stop">STOP</button>
+        <button class="drive" data-command="RIGHT">→</button>
+        <span></span><button class="drive" data-command="BACKWD">↓</button><span></span>
+        <span></span><button id="status">STATUS</button><span></span>
+      </div>
+      <div id="help">Hold mode: release = STOP</div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title">VIDEO STREAMING 2</h2>
+      <div class="video">VIDEO STREAMING 2</div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title">USER LOG</h2>
+      <div id="log" role="log" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    // Offline interface demonstration. Nothing sends commands to real motors.
+    const logScreen = document.getElementById("log");
+    let mode = "HOLD";
+    let activeCommand = "STOP";
+    let activePointer = null;
+
+    function log(message) {
+      logScreen.textContent += message + "\n";
+      logScreen.scrollTop = logScreen.scrollHeight;
+    }
+
+    const username = decodeURIComponent((location.hash.match(/(?:^#|&)user=([^&]*)/) || [])[1] || "demo");
+    log("SYSTEM: Rover control system initialized.");
+    log("SYSTEM: Logged in as " + username + ".");
+    log("SYSTEM: Control mode = HOLD.");
+    log("SYSTEM: Raspberry Pi API not connected. Offline GUI demonstration only.");
+
+    function start(command) {
+      if (activeCommand === command) return;
+      activeCommand = command;
+      log("COMMAND: " + command + " | API not connected (demo only).");
+    }
+    function stop() {
+      activeCommand = "STOP";
+      log("COMMAND: STOP | API not connected (demo only).");
+    }
+
+    document.querySelectorAll(".drive").forEach(button => {
+      button.addEventListener("pointerdown", event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        activePointer = event.pointerId;
+        button.setPointerCapture(event.pointerId);
+        start(button.dataset.command);
+      });
+      const release = event => {
+        if (activePointer !== event.pointerId) return;
+        activePointer = null;
+        if (mode === "HOLD") stop();
+      };
+      button.addEventListener("pointerup", release);
+      button.addEventListener("pointercancel", release);
+      button.addEventListener("lostpointercapture", release);
+    });
+
+    document.getElementById("stop").onclick = stop;
+    document.getElementById("mode").onclick = () => {
+      stop();
+      mode = mode === "HOLD" ? "CONTINUOUS" : "HOLD";
+      document.getElementById("mode").textContent = "MODE: " + mode;
+      document.getElementById("help").textContent = mode === "HOLD"
+        ? "Hold mode: release = STOP"
+        : "Continuous mode: press STOP to stop";
+      log("SYSTEM: Control mode = " + mode + ".");
+    };
+    document.getElementById("status").onclick = () => {
+      log("STATUS: API not connected | Local command=" + activeCommand);
+    };
+  </script>
+</body>
+</html>

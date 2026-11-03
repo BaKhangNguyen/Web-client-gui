@@ -1,0 +1,12 @@
+{
+  "purpose": "Sample offline data only. The HTML does not read this file.",
+  "algorithm": "PBKDF2-SHA256",
+  "iterations": 120000,
+  "users": [
+    {
+      "username": "demo",
+      "salt": "cd6d5bdd8610ca48921b50419d20e927",
+      "password_hash": "f1edb0dec12fbc47cac13764d460b9b48561cdbff7812ec487c2d01424fd9763"
+    }
+  ]
+}

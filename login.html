@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DSE Mars Rover - Login</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main>
+    <div>
+      <h1>DSE MARS ROVER</h1>
+      <label for="username">Username</label>
+      <input id="username" autocomplete="username" autofocus>
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password">
+      <button id="login">Login</button>
+      <button id="create">Create Account</button>
+      <div id="connection">Raspberry Pi API not connected.</div>
+    </div>
+  </main>
+
+  <script>
+    // OFFLINE DEMO ONLY. The actual Raspberry Pi database is NOT accessed.
+    // The sample account is also shown in users_demo.db and users_demo.json.
+    const demoUser = {
+      username: "demo",
+      salt: "cd6d5bdd8610ca48921b50419d20e927",
+      passwordHash: "f1edb0dec12fbc47cac13764d460b9b48561cdbff7812ec487c2d01424fd9763"
+    };
+    const key = "dse_rover_offline_users_v1";
+    const usernameBox = document.getElementById("username");
+    const passwordBox = document.getElementById("password");
+
+    // Derive a salted PBKDF2-SHA256 password hash, not plaintext storage.
+    async function passwordHash(password, salt) {
+      const encoder = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]
+      );
+      const bits = await crypto.subtle.deriveBits(
+        { name: "PBKDF2", hash: "SHA-256", salt: Uint8Array.from(salt.match(/../g).map(x => parseInt(x, 16))), iterations: 120000 },
+        keyMaterial, 256
+      );
+      return Array.from(new Uint8Array(bits), b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function readUsers() {
+      try { return JSON.parse(localStorage.getItem(key) || "{}"); }
+      catch { return {}; }
+    }
+
+    async function login() {
+      const username = usernameBox.value.trim();
+      const password = passwordBox.value;
+      if (!username || !password) return alert("Enter a username and password.");
+      const user = username === demoUser.username ? demoUser : readUsers()[username];
+      if (!user || (await passwordHash(password, user.salt)) !== user.passwordHash) {
+        return alert("Invalid username or password.");
+      }
+      window.location.href = "control.html#user=" + encodeURIComponent(username);
+    }
+
+    async function createAccount() {
+      const username = usernameBox.value.trim();
+      const password = passwordBox.value;
+      if (!username || !password) return alert("Enter a username and password.");
+      const users = readUsers();
+      if (username === demoUser.username || users[username]) return alert("Username already exists.");
+      const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join("");
+      users[username] = { salt, passwordHash: await passwordHash(password, salt) };
+      try { localStorage.setItem(key, JSON.stringify(users)); }
+      catch { return alert("Browser storage is unavailable. Use demo / rover123 instead."); }
+      alert("Account created successfully. You can now log in.");
+    }
+
+    document.getElementById("login").onclick = () => login().catch(() => alert("Browser hashing is unavailable."));
+    document.getElementById("create").onclick = () => createAccount().catch(() => alert("Browser storage or hashing is unavailable."));
+    passwordBox.addEventListener("keydown", event => { if (event.key === "Enter") document.getElementById("login").click(); });
+  </script>
+</body>
+</html>
